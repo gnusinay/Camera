@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal" />
+
+    <!-- <LinearLayout
+         android:id="@+id/controls_group"
+         android:layout_width="match_parent"
+         android:layout_height="match_parent"
+         android:orientation="horizontal" >-->
+
+    <ImageButton
+        android:id="@+id/cameras_switch_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left"
+        android:layout_margin="10dp"
+        android:background="@drawable/controls_button"
+        android:src="@mipmap/ic_camera_front" />
+
+    <ImageButton
+        android:id="@+id/flash_mode_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left|center_vertical"
+        android:layout_margin="10dp"
+        android:background="@drawable/controls_button"
+        android:src="@mipmap/ic_flash_auto" />
+
+
+    <ImageButton
+        android:id="@+id/capture_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right|center_vertical"
+        android:layout_margin="10dp"
+        android:background="@drawable/take_photo_button"
+        android:src="@mipmap/ic_photo_camera" />
+
+    <!--   </LinearLayout>-->
+</FrameLayout>
+
