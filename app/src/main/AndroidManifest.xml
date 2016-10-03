@@ -7,17 +7,16 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" >
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar" >
         <activity
             android:name=".CameraActivity_" >
+
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".SavePictureActivity_" />
     </application>
 
     <uses-permission android:name="android.permission.CAMERA"/>

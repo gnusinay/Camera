@@ -1,11 +1,10 @@
 package com.mercury.gnusin.camera;
 
+import org.androidannotations.annotations.sharedpreferences.DefaultBoolean;
 import org.androidannotations.annotations.sharedpreferences.DefaultInt;
 import org.androidannotations.annotations.sharedpreferences.SharedPref;
 
-/**
- * Created by gnusin on 28.09.2016.
- */
+
 
 @SharedPref
 public interface MyPrefs {
@@ -15,6 +14,9 @@ public interface MyPrefs {
 
     @DefaultInt(0)
     int camerasSwitch();      // 0 - rear camera, 1 - front camera
+
+    @DefaultBoolean(true)
+    boolean isCaptureFragment();
 
     long lastUpdated();
 }
