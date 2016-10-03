@@ -9,7 +9,9 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen" >
         <activity
-            android:name=".CameraActivity_" >
+            android:name=".CameraActivity_" 
+            android:screenOrientation="landscape" >
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
