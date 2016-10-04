@@ -3,10 +3,8 @@ package com.mercury.gnusin.camera;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 
-/**
- * Created by gnusin on 03.10.2016.
- */
-public class RotationHelper {
+
+public class ScreenRotationHelper {
     static int getSectorNumber(int degrees) {
         if (degrees >= 330 || degrees < 30) {
             return 1;
@@ -36,8 +34,7 @@ public class RotationHelper {
     }
 
     static Bitmap rotateCapturedPicture(Bitmap picture, int currentSector) {
-        //currentSector = currentSector - getWindowManager().getDefaultDisplay().getRotation();
-        int degrees = 0;//getWindowManager().getDefaultDisplay().getRotation();
+        int degrees = 0;
         switch (currentSector) {
             case 1:
                 degrees = 90;
@@ -46,17 +43,14 @@ public class RotationHelper {
                 degrees = 0;
                 break;
             case 3:
-                degrees = 180;
+                degrees = 270;
                 break;
             case 4:
-                degrees = 270;
+                degrees = 180;
                 break;
         }
         Matrix matrix = new Matrix();
         matrix.postRotate(degrees);
         return Bitmap.createBitmap(picture, 0, 0, picture.getWidth(), picture.getHeight(), matrix, true);
-
-        // mCamera.set(degrees);
-
     }
 }

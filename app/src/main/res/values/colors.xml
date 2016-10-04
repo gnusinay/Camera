@@ -3,4 +3,7 @@
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
     <color name="colorAccent">#FF4081</color>
+    <color name="colorSaveFragmentBackground">#ee000000</color>
+    <color name="colorSaveFragmentButtons">#66000000</color>
+    <color name="colorPressedSaveFragmentButtons">#b9000000</color>
 </resources>

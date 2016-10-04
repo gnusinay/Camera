@@ -12,6 +12,7 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Toast;
@@ -77,8 +78,8 @@ public class CameraActivity extends AppCompatActivity {
 
     private void loadSavePictureFragment(String filePath) {
         myPrefs.isCaptureFragment().put(false);
-
         SavePictureFragment savePictureFragment = (SavePictureFragment) getSupportFragmentManager().findFragmentByTag(SavePictureFragment.TAG);
+        Log.d("AGn", getSupportFragmentManager().toString() + " - savePictureFragment - " + savePictureFragment);
         if (savePictureFragment == null) {
             savePictureFragment = new SavePictureFragment_();
             Bundle bundle = new Bundle();

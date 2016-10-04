@@ -1,15 +1,16 @@
 package com.mercury.gnusin.camera;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.SensorManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.OrientationEventListener;
-import android.view.SurfaceHolder;
-import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -22,13 +23,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 
 
 @EFragment(R.layout.f_camera)
-public class CaptureFragment extends Fragment implements SurfaceHolder.Callback, Camera.PictureCallback {
+public class CaptureFragment extends Fragment {
 
     public static final String TAG = "CaptureFragment";
 
@@ -47,54 +46,56 @@ public class CaptureFragment extends Fragment implements SurfaceHolder.Callback,
     @Pref
     MyPrefs_ myPrefs;
 
-    private Camera camera;
-    private SurfaceHolder previewHolder;
+    private CustomCamera customCamera;
 
     private int currentSectorNumber;
     private int currentAngleRotationButtons;
-    private boolean checkOrientation;
+    private BroadcastReceiver capturePictureReceiver;
 
     @AfterViews
     void init() {
         currentSectorNumber = 1 + getActivity().getWindowManager().getDefaultDisplay().getRotation();
         currentAngleRotationButtons = 0;
-        checkOrientation = true;
 
         new OrientationEventListener(getActivity(), SensorManager.SENSOR_DELAY_NORMAL) {
             @Override
             public void onOrientationChanged(int orientation) {
-                if (checkOrientation) {
-                    int toSectorNumber = RotationHelper.getSectorNumber(orientation);
+                if (customCamera != null) {
+                    int toSectorNumber = ScreenRotationHelper.getSectorNumber(orientation);
                     if (toSectorNumber != -1 && currentSectorNumber != toSectorNumber) {
-                        currentAngleRotationButtons = RotationHelper.calcNewAngleRotation(currentSectorNumber, toSectorNumber, currentAngleRotationButtons);
-                        rotateButtons(1000, currentAngleRotationButtons);
+                        currentAngleRotationButtons = ScreenRotationHelper.calcNewAngleRotation(currentSectorNumber, toSectorNumber, currentAngleRotationButtons);
+                        rotateButtons(700, currentAngleRotationButtons);
                         currentSectorNumber = toSectorNumber;
                     }
                 }
             }
         }.enable();
+
+        capturePictureReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String filePath = saveCapturedBitmapToFile();
+                Intent captureIntent = new Intent(CameraActivity.CAPTURE_EVENT);
+                captureIntent.putExtra("value", filePath);
+                LocalBroadcastManager.getInstance(context).sendBroadcast(captureIntent);
+            }
+        };
+        LocalBroadcastManager.getInstance(getActivity()).registerReceiver(capturePictureReceiver, new IntentFilter(CustomCamera.CAMERA_CAPTURE_EVENT));
     }
 
 
     @Override
     public void onResume() {
         super.onResume();
-        boolean isInitial = initCamera();
-
-        if (!isInitial) {
-            Intent intent = new Intent(CameraActivity.ERROR_EVENT);
-            intent.putExtra("value", "Failed initialization camera");
-            LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(intent);
-        }
-        checkOrientation = true;
+        customCamera = initCamera();
     }
 
 
     @Override
     public void onPause() {
         super.onPause();
-        releaseCamera();
-        checkOrientation = false;
+        customCamera.release();
+        customCamera = null;
     }
 
     @Click
@@ -102,9 +103,8 @@ public class CaptureFragment extends Fragment implements SurfaceHolder.Callback,
         int cameraId = myPrefs.camerasSwitch().get();
         cameraId = cameraId == 0 ? 1 : 0;
         myPrefs.camerasSwitch().put(cameraId);
-
-        releaseCamera();
-        initCamera();
+        customCamera.release();
+        customCamera = initCamera();
     }
 
 
@@ -112,69 +112,44 @@ public class CaptureFragment extends Fragment implements SurfaceHolder.Callback,
     void flashModeButton() {
         int mode = myPrefs.flashMode().get();
         mode = mode == 2 ? 0 : ++mode;
+
+        switch(mode) {
+            case 0:
+                customCamera.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+                flashModeButton.setImageResource(R.mipmap.ic_flash_auto);
+                break;
+            case 1:
+                customCamera.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
+                flashModeButton.setImageResource(R.mipmap.ic_flash_on);
+                break;
+            case 2:
+                customCamera.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                flashModeButton.setImageResource(R.mipmap.ic_flash_off);
+                break;
+        }
+
         myPrefs.flashMode().put(mode);
-        changeFlashMode(mode);
+
     }
 
     @Click
     void captureButton() {
-        camera.takePicture(null, null, this);
+        customCamera.takePicture();
     }
 
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        if (camera != null) {
-            try {
-                camera.setPreviewDisplay(previewHolder);
-                camera.startPreview();
-            } catch (IOException e) {
-                releaseCamera();
-            }
-        }
+    @Click
+    void cameraPreview() {
+       // customCamera.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
     }
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-
+    public void onDestroy() {
+        LocalBroadcastManager.getInstance(getActivity()).unregisterReceiver(capturePictureReceiver);
+        super.onDestroy();
     }
 
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-
-    }
-
-    @Override
-    public void onPictureTaken(byte[] data, Camera camera) {
-        File pictureTempFile = null;
-        FileOutputStream fos = null;
-        try {
-            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length - 1);
-            Bitmap rotatedBitmap = RotationHelper.rotateCapturedPicture(bitmap, currentSectorNumber);
-            pictureTempFile = getOutputMediaTempFile();
-            fos = new FileOutputStream(pictureTempFile);
-            rotatedBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos);
-            fos.close();
-        } catch (IOException e) {
-            Intent intent = new Intent(CameraActivity.ERROR_EVENT);
-            intent.putExtra("value", "Can not save captured picture");
-            LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(intent);
-            return;
-        } finally {
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                }
-            }
-        }
-
-        Intent captureIntent = new Intent(CameraActivity.CAPTURE_EVENT);
-        captureIntent.putExtra("value", pictureTempFile.getAbsoluteFile().toString());
-        LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(captureIntent);
-    }
-
-    private boolean initCamera() {
+    private CustomCamera initCamera() {
+        CustomCamera camera = null;
         try {
             if (Camera.getNumberOfCameras() > 1) {
                 switch (myPrefs.camerasSwitch().get()) {
@@ -189,65 +164,39 @@ public class CaptureFragment extends Fragment implements SurfaceHolder.Callback,
                 camerasSwitchButton.setVisibility(View.INVISIBLE);
             }
 
-            camera = Camera.open(myPrefs.camerasSwitch().get());
+            camera = new CustomCamera(getActivity(), myPrefs.camerasSwitch().get());
 
-            SurfaceView surfaceView = new SurfaceView(getActivity());
-            previewHolder = surfaceView.getHolder();
-            previewHolder.addCallback(this);
-            cameraPreview.removeAllViews();
-            cameraPreview.addView(surfaceView);
-
-            Camera.Parameters params = camera.getParameters();
-            List<String> focusMode = params.getSupportedFocusModes();
-            if (focusMode != null && focusMode.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
-                params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-                camera.setParameters(params);
-            }
-
-            List<String> flashModes = params.getSupportedFlashModes();
-            if (flashModes != null && flashModes.containsAll(Arrays.asList(Camera.Parameters.FLASH_MODE_AUTO, Camera.Parameters.FLASH_MODE_OFF, Camera.Parameters.FLASH_MODE_ON))) {
+            camera.setPictureSize(2000, 1000);
+            camera.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+            if (camera.isSupportedFlash()) {
+                switch (myPrefs.flashMode().get()) {
+                    case 0:
+                        camera.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+                        flashModeButton.setImageResource(R.mipmap.ic_flash_auto);
+                        break;
+                    case 1:
+                        camera.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
+                        flashModeButton.setImageResource(R.mipmap.ic_flash_on);
+                        break;
+                    case 2:
+                        camera.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+                        flashModeButton.setImageResource(R.mipmap.ic_flash_off);
+                        break;
+                }
                 flashModeButton.setVisibility(View.VISIBLE);
-                changeFlashMode(myPrefs.flashMode().get());
             } else {
                 flashModeButton.setVisibility(View.INVISIBLE);
             }
+
+            cameraPreview.removeAllViews();
+            cameraPreview.addView(camera.getSurfaceView());
         } catch (Exception e) {
-            if (camera != null) {
-                camera.release();
-                camera = null;
-            }
-            return false;
+            Intent intent = new Intent(CameraActivity.ERROR_EVENT);
+            intent.putExtra("value", "Failed initialization camera");
+            LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(intent);
         }
 
-        return true;
-    }
-
-    private void releaseCamera() {
-        if (camera != null) {
-            camera.stopPreview();
-            camera.release();
-            camera = null;
-            previewHolder = null;
-        }
-    }
-
-    private void changeFlashMode(int mode) {
-        Camera.Parameters params = camera.getParameters();
-        switch (mode) {
-            case 0:
-                flashModeButton.setImageResource(R.mipmap.ic_flash_auto);
-                params.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
-                break;
-            case 1:
-                flashModeButton.setImageResource(R.mipmap.ic_flash_on);
-                params.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
-                break;
-            case 2:
-                flashModeButton.setImageResource(R.mipmap.ic_flash_off);
-                params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-                break;
-        }
-        camera.setParameters(params);
+        return camera;
     }
 
 
@@ -255,6 +204,33 @@ public class CaptureFragment extends Fragment implements SurfaceHolder.Callback,
         captureButton.animate().setDuration(duration).rotation(angle);
         camerasSwitchButton.animate().setDuration(duration).rotation(angle);
         flashModeButton.animate().setDuration(duration).rotation(angle);
+    }
+
+    private String saveCapturedBitmapToFile() {
+        File pictureTempFile = null;
+        FileOutputStream fos = null;
+        try {
+            Bitmap bitmap = customCamera.getCapturedPicture();
+            Bitmap rotatedBitmap = ScreenRotationHelper.rotateCapturedPicture(bitmap, currentSectorNumber);
+            pictureTempFile = getOutputMediaTempFile();
+            fos = new FileOutputStream(pictureTempFile);
+            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+            fos.close();
+        } catch (IOException e) {
+            Intent intent = new Intent(CameraActivity.ERROR_EVENT);
+            intent.putExtra("value", "Can not save captured picture");
+            LocalBroadcastManager.getInstance(getActivity()).sendBroadcast(intent);
+            return "";
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                }
+            }
+        }
+
+        return pictureTempFile.getAbsolutePath().toString();
     }
 
 
