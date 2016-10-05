@@ -80,7 +80,7 @@ public class CustomCamera implements SurfaceHolder.Callback, Camera.PictureCallb
         if (size == null) {
             for (int i = 0; i < sizes.size(); i++) {
                 float tRatio = Math.round(sizes.get(i).width * 10f / sizes.get(i).height) / 10f;
-                if (sidesRatio > tRatio - 0.2f && sidesRatio < tRatio + 0.2f && sizes.get(i).width > width) {
+                if (sidesRatio > tRatio - 0.2f && sidesRatio < tRatio + 0.2f) {
                     size = sizes.get(i);
                 }
             }
@@ -114,6 +114,7 @@ public class CustomCamera implements SurfaceHolder.Callback, Camera.PictureCallb
     public void surfaceDestroyed(SurfaceHolder holder) {
 
     }
+
 
     @Override
     public void onPictureTaken(byte[] data, Camera camera) {
