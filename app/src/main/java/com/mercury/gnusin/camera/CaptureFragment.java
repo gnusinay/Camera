@@ -10,6 +10,7 @@ import android.hardware.SensorManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.widget.ImageButton;
@@ -51,6 +52,7 @@ public class CaptureFragment extends Fragment {
     private int currentSectorNumber;
     private int currentAngleRotationButtons;
     private BroadcastReceiver capturePictureReceiver;
+    private BroadcastReceiver remoteControlReceiver;
 
     @AfterViews
     void init() {
@@ -71,6 +73,7 @@ public class CaptureFragment extends Fragment {
             }
         }.enable();
 
+
         capturePictureReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -81,6 +84,8 @@ public class CaptureFragment extends Fragment {
             }
         };
         LocalBroadcastManager.getInstance(getActivity()).registerReceiver(capturePictureReceiver, new IntentFilter(CustomCamera.CAMERA_CAPTURE_EVENT));
+
+
     }
 
 
@@ -88,6 +93,21 @@ public class CaptureFragment extends Fragment {
     public void onResume() {
         super.onResume();
         customCamera = initCamera();
+        getView().setFocusableInTouchMode(true);
+        getView().requestFocus();
+        getView().setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if (event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_DOWN || event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                        customCamera.takePicture();
+                    }
+                    return true;
+                }
+
+                return false;
+            }
+        });
     }
 
 
@@ -106,6 +126,7 @@ public class CaptureFragment extends Fragment {
         customCamera.release();
         customCamera = initCamera();
     }
+
 
 
     @Click
@@ -131,6 +152,7 @@ public class CaptureFragment extends Fragment {
         myPrefs.flashMode().put(mode);
 
     }
+
 
     @Click
     void captureButton() {

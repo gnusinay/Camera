@@ -21,6 +21,7 @@ public class CustomCamera implements SurfaceHolder.Callback, Camera.PictureCallb
     private Camera camera;
     private SurfaceView surfaceView;
     private Bitmap capturedPictureBitmap;
+    private boolean isFree = true;
 
     public CustomCamera(Context context, int cameraID) throws Exception {
         this.context = context;
@@ -63,7 +64,10 @@ public class CustomCamera implements SurfaceHolder.Callback, Camera.PictureCallb
     }
 
     public void takePicture() {
-        camera.takePicture(null, null, this);
+        if (isFree) {
+            camera.takePicture(null, null, this);
+            isFree = false;
+        }
     }
 
     public void setPictureSize(int width, int height) {
@@ -121,6 +125,7 @@ public class CustomCamera implements SurfaceHolder.Callback, Camera.PictureCallb
         capturedPictureBitmap = BitmapFactory.decodeByteArray(data, 0, data.length - 1);
         Intent captureIntent = new Intent(CustomCamera.CAMERA_CAPTURE_EVENT);
         LocalBroadcastManager.getInstance(context).sendBroadcast(captureIntent);
+        isFree = true;
     }
 
 
